@@ -2,156 +2,380 @@
 
 ## AWS Cloud Operations & Monitoring Platform
 
-OpsPulse is a production-style cloud operations project designed to demonstrate the deployment, monitoring, alerting, and operational support of a containerised application running on AWS.
+OpsPulse is a production-style cloud operations and DevOps project designed to demonstrate the deployment, monitoring, alerting, troubleshooting, and recovery of a containerised application running on AWS.
 
-The project combines **FastAPI, Docker, AWS EC2, Terraform, Amazon CloudWatch, Amazon SNS, IAM, and GitHub** to demonstrate a complete cloud operations workflow.
-
-The project follows the operational lifecycle:
+The project combines **FastAPI, Docker, AWS EC2, Terraform, IAM, Amazon CloudWatch, Amazon SNS, Git, and GitHub** to demonstrate the complete operational lifecycle of a cloud-hosted application.
 
 **Build → Containerise → Provision → Deploy → Monitor → Alert → Troubleshoot → Recover**
 
 ---
 
-## Overview
+# Table of Contents
 
-OpsPulse consists of a lightweight FastAPI application running inside a Docker container on an Amazon EC2 instance.
-
-AWS infrastructure is provisioned and managed using Terraform.
-
-The application provides health and readiness endpoints, while Amazon CloudWatch provides centralised logging, infrastructure monitoring, dashboards, and alarms.
-
-Amazon SNS is integrated with CloudWatch to provide automated email notifications when monitored infrastructure enters an alarm state.
-
-The project was built to demonstrate practical skills relevant to:
-
-- Cloud Operations Engineering
-- DevOps Engineering
-- Technical Operations
-- Platform Support
-- Cloud Support Engineering
-- Infrastructure Engineering
+- [Project Overview](#project-overview)
+- [Solution Architecture](#solution-architecture)
+- [Architecture Components](#architecture-components)
+- [Core Features](#core-features)
+- [Technology Stack](#technology-stack)
+- [Application Endpoints](#application-endpoints)
+- [Containerisation](#containerisation)
+- [AWS Infrastructure](#aws-infrastructure)
+- [Infrastructure as Code](#infrastructure-as-code)
+- [Security](#security)
+- [Centralised Logging](#centralised-logging)
+- [Monitoring](#monitoring)
+- [SNS Alerting](#sns-alerting)
+- [Alert Validation](#alert-validation)
+- [Incident Response](#incident-response)
+- [Troubleshooting Experience](#troubleshooting-experience)
+- [Repository Structure](#repository-structure)
+- [Operational Workflow](#operational-workflow)
+- [Skills Demonstrated](#skills-demonstrated)
+- [Project Status](#project-status)
+- [Learning Outcomes](#learning-outcomes)
+- [Future Improvements](#future-improvements)
+- [Author](#author)
 
 ---
 
-## Architecture
+# Project Overview
+
+OpsPulse runs a lightweight FastAPI application inside a Docker container hosted on an Amazon EC2 instance.
+
+AWS infrastructure is provisioned and managed using Terraform.
+
+The application provides dedicated health and readiness endpoints, while Amazon CloudWatch provides:
+
+- Centralised application logging
+- Infrastructure metrics
+- Operational dashboards
+- Alarm management
+
+Amazon SNS is integrated with CloudWatch to provide automated email notifications when infrastructure enters an alarm state.
+
+OpsPulse demonstrates practical skills relevant to roles such as:
+
+- Cloud Operations Engineer
+- Cloud Support Engineer
+- DevOps Engineer
+- Technical Operations Engineer
+- Platform Support Engineer
+- Infrastructure Engineer
+
+---
+
+# Solution Architecture
+
+```mermaid
+flowchart TD
+
+    DEV[Developer / GitHub Repository]
+
+    DEV --> TF[Terraform Infrastructure as Code]
+
+    TF --> AWS[AWS Cloud Environment]
+
+    AWS --> SG[Security Group]
+    AWS --> IAM[IAM Role and Instance Profile]
+    AWS --> EC2[Amazon EC2]
+    AWS --> CW[Amazon CloudWatch]
+    AWS --> SNS[Amazon SNS]
+
+    SG --> EC2
+    IAM --> EC2
+
+    EC2 --> DOCKER[Docker Engine]
+    DOCKER --> API[OpsPulse FastAPI Application]
+
+    API --> HEALTH[/health]
+    API --> READY[/ready]
+    API --> DOCS[/docs]
+
+    DOCKER --> LOGS[Application Logs]
+
+    LOGS --> CWLOGS[CloudWatch Logs]
+    EC2 --> METRICS[EC2 Metrics]
+
+    CWLOGS --> CW
+    METRICS --> CW
+
+    CW --> DASH[CloudWatch Dashboard]
+    CW --> ALARM[High CPU Alarm]
+
+    ALARM --> SNS
+    SNS --> EMAIL[Email Notification]
+
+    EMAIL --> OPS[Operations Engineer]
+
+    OPS --> INVESTIGATE[Incident Investigation]
+    INVESTIGATE --> HEALTH
+    INVESTIGATE --> CWLOGS
+    INVESTIGATE --> DASH
+```
+
+---
+
+# Architecture Components
+
+## GitHub
+
+GitHub acts as the central source-control repository for:
+
+- Application code
+- Docker configuration
+- Terraform infrastructure
+- Incident-response documentation
+- Project documentation
+
+Git is used to track and manage changes throughout the project.
+
+---
+
+## Terraform
+
+Terraform provides the Infrastructure as Code layer.
+
+Terraform manages resources including:
+
+- EC2 instance
+- Security group
+- IAM role
+- IAM instance profile
+- CloudWatch log group
+- CloudWatch alarm
+- CloudWatch dashboard
+- SNS topic
+- SNS email subscription
+
+This makes the infrastructure reproducible and version-controlled.
+
+---
+
+## Amazon EC2
+
+Amazon EC2 provides the compute environment for OpsPulse.
+
+The deployment follows:
 
 ```text
-                       GitHub
-                          │
-                          ▼
-                  Application Code
-                          │
-                          ▼
-                       Docker
-                          │
-                          ▼
-                  AWS EC2 Instance
-                          │
-                          ▼
-                    OpsPulse API
-                   ┌──────┴──────┐
-                   │             │
-                   ▼             ▼
-             Health Checks    Application Logs
-             /health          /opspulse/application
-             /ready                 │
-                   │                 │
-                   └────────┬────────┘
-                            ▼
-                    Amazon CloudWatch
-                   ┌────────┴────────┐
-                   │                 │
-                   ▼                 ▼
-             Operations          CPU Alarm
-              Dashboard              │
-                                     ▼
-                               Amazon SNS
-                                     │
-                                     ▼
-                             Email Notification
-Technology Stack
-Technology	Purpose
-Python	Application development
-FastAPI	REST API framework
-Uvicorn	ASGI application server
-Docker	Application containerisation
-AWS EC2	Cloud compute infrastructure
-Terraform	Infrastructure as Code
-AWS IAM	Secure service permissions
-Amazon CloudWatch	Metrics, logs, dashboards and alarms
-Amazon SNS	Email alert notifications
-Git	Source control
-GitHub	Repository and project version control
-Core Features
+Amazon EC2
+     │
+     ▼
+Docker Engine
+     │
+     ▼
+OpsPulse Container
+     │
+     ▼
+FastAPI Application
+```
+
+The FastAPI application listens on:
+
+```text
+TCP Port 8000
+```
+
+---
+
+## Docker
+
+Docker packages the FastAPI application and its dependencies into a portable container.
+
+Docker provides:
+
+- Consistent application runtime
+- Dependency isolation
+- Simplified deployment
+- Container restart capability
+- CloudWatch logging integration
+
+---
+
+## FastAPI
+
+FastAPI provides the application layer.
+
+The application exposes:
+
+```text
+/
+```
+
+```text
+/health
+```
+
+```text
+/ready
+```
+
+```text
+/docs
+```
+
+These endpoints provide both application functionality and operational visibility.
+
+---
+
+## IAM
+
+The EC2 instance uses an IAM role and instance profile to interact with AWS services.
+
+This avoids storing permanent AWS credentials directly on the EC2 server.
+
+IAM permissions support services such as CloudWatch logging and monitoring.
+
+---
+
+## Security Groups
+
+AWS security groups control access to the EC2 instance.
+
+SSH access is restricted to an authorised public IP address rather than being exposed to the entire internet.
+
+Application traffic is allowed through:
+
+```text
+TCP Port 8000
+```
+
+---
+
+## Amazon CloudWatch
+
+CloudWatch provides:
+
+- EC2 metrics
+- Application logs
+- Dashboard visibility
+- CPU monitoring
+- Alarm management
+
+---
+
+## Amazon SNS
+
+Amazon SNS provides the notification layer.
+
+When the CloudWatch CPU alarm enters the `ALARM` state, an event is published to SNS.
+
+SNS then sends an email notification to the configured subscriber.
+
+Recovery notifications are also enabled when the alarm returns to `OK`.
+
+---
+
+# Core Features
 
 OpsPulse includes:
 
-Containerised FastAPI application
-AWS EC2 deployment
-Terraform-managed infrastructure
-Restricted SSH access
-IAM role-based AWS permissions
-Application health monitoring
-Application readiness monitoring
-Centralised CloudWatch logging
-CloudWatch infrastructure metrics
-CloudWatch operations dashboard
-High-CPU monitoring
-Automated SNS email alerts
-Alarm recovery notifications
-Incident-response documentation
-Git-based version control
-Application Endpoints
-Root Endpoint
+- FastAPI application
+- Docker containerisation
+- AWS EC2 hosting
+- Terraform Infrastructure as Code
+- IAM-based permissions
+- Restricted SSH access
+- Health checks
+- Readiness checks
+- Centralised CloudWatch logging
+- CloudWatch infrastructure metrics
+- CloudWatch dashboard
+- High-CPU monitoring
+- SNS email alerting
+- Alarm recovery notifications
+- Incident-response documentation
+- Git version control
+- Infrastructure recovery testing
+
+---
+
+# Technology Stack
+
+| Technology | Purpose |
+|---|---|
+| Python | Application development |
+| FastAPI | REST API framework |
+| Uvicorn | ASGI application server |
+| Docker | Containerisation |
+| AWS EC2 | Cloud compute |
+| Terraform | Infrastructure as Code |
+| AWS IAM | Access management |
+| Security Groups | Network security |
+| Amazon CloudWatch | Logs, metrics, dashboards and alarms |
+| Amazon SNS | Email notifications |
+| AWS CLI | AWS administration and testing |
+| Git | Version control |
+| GitHub | Source-code repository |
+
+---
+
+# Application Endpoints
+
+## Root Endpoint
+
+```text
 /
+```
 
 Confirms that the OpsPulse API is accessible.
 
-Health Check
-/health
+---
 
-Used to confirm that the application is running.
+## Health Endpoint
+
+```text
+/health
+```
+
+Used to confirm that the application is alive.
 
 Example response:
 
+```json
 {
   "status": "healthy",
   "environment": "production"
 }
-Readiness Check
+```
+
+---
+
+## Readiness Endpoint
+
+```text
 /ready
+```
 
-Used to determine whether the service is ready to receive requests.
+Used to confirm that the application is ready to receive traffic.
 
-This type of endpoint is useful for monitoring platforms, container orchestrators, and load balancers.
+Readiness endpoints are useful for monitoring tools, container platforms, and load balancers.
 
-API Documentation
+---
+
+## API Documentation
+
+```text
 /docs
+```
 
 FastAPI automatically provides interactive Swagger/OpenAPI documentation.
 
-Containerisation
+---
 
-The application is packaged as a Docker image.
+# Containerisation
 
-Containerisation provides a consistent runtime environment and allows the same application image to operate across development and cloud environments.
+The application is packaged into a Docker image.
 
-The OpsPulse container exposes:
+Build:
 
-Port 8000
-
-The production container uses an automatic restart policy:
-
---restart unless-stopped
-
-This allows Docker to restart the service automatically after unexpected container or host interruptions.
-
-Docker Build
+```bash
 docker build -t opspulse .
-Docker Runtime
+```
 
-The production deployment uses configuration similar to:
+The production container uses:
 
+```bash
 docker run -d \
   --name opspulse \
   --restart unless-stopped \
@@ -162,309 +386,391 @@ docker run -d \
   --log-opt awslogs-group=/opspulse/application \
   --log-opt awslogs-stream=opspulse-production \
   opspulse
-AWS Infrastructure
+```
 
-OpsPulse is deployed in the AWS London Region:
+The restart policy:
 
-eu-west-2
+```text
+--restart unless-stopped
+```
+
+allows Docker to restart the application following unexpected interruption.
+
+---
+
+# AWS Infrastructure
+
+OpsPulse is deployed in:
+
+```text
+AWS Region: eu-west-2
+```
 
 The cloud environment includes:
 
-EC2 compute
-Security groups
-IAM roles
-IAM instance profiles
-CloudWatch logs
-CloudWatch alarms
-CloudWatch dashboard
-SNS notifications
-Infrastructure as Code
+- EC2
+- Security Groups
+- IAM
+- CloudWatch
+- SNS
 
-Terraform is used to provision and manage the AWS infrastructure.
+The EC2 instance hosts the Docker runtime and FastAPI application.
 
-Infrastructure as Code allows the environment to be defined in configuration files rather than being dependent on manually created resources.
+---
 
-Terraform manages resources including:
+# Infrastructure as Code
 
-EC2 instance
-Security group
-IAM role
-IAM instance profile
-CloudWatch log group
-CloudWatch monitoring alarm
-CloudWatch dashboard
-SNS topic
-SNS email subscription
+Terraform manages the AWS infrastructure.
 
-This provides:
+The workflow used is:
 
-Repeatability
-Version control
-Infrastructure consistency
-Change visibility
-Faster recovery
-Reduced configuration drift
-Terraform Workflow
-
-Infrastructure changes are managed using:
-
+```bash
 terraform init
 terraform fmt
 terraform validate
 terraform plan
 terraform apply
+```
 
-terraform plan is reviewed before deployment to identify resources that Terraform intends to:
+Before deployment, `terraform plan` is reviewed to identify resources that Terraform intends to:
 
+```text
 Create
-Modify
+Change
 Replace
 Destroy
+```
 
-This helps reduce unintended infrastructure changes.
+Using Infrastructure as Code provides:
 
-Security
-Security Groups
+- Repeatability
+- Version control
+- Consistency
+- Change tracking
+- Faster recovery
+- Reduced configuration drift
 
-Network access to the EC2 instance is controlled using an AWS security group.
+---
 
-SSH access is restricted to an authorised public IP address instead of being exposed to the entire internet.
+# Security
 
-The FastAPI application is exposed through:
+## SSH Access
 
-TCP Port 8000
-IAM
+SSH access is restricted to an authorised public IP address.
+
+This prevents unrestricted SSH access from the internet.
+
+---
+
+## IAM Permissions
 
 The EC2 instance uses an IAM role and instance profile.
 
-This allows the server to access required AWS services without storing permanent AWS access keys directly on the instance.
+This allows AWS service access without storing permanent AWS credentials directly on the server.
 
-IAM permissions are used for services such as CloudWatch logging and monitoring.
+---
 
-Centralised Logging
+## Network Access
 
-Docker application logs are forwarded directly to Amazon CloudWatch Logs.
+Application traffic is exposed through:
 
-CloudWatch Log Group
+```text
+TCP Port 8000
+```
+
+using the configured EC2 security group.
+
+---
+
+# Centralised Logging
+
+Docker application logs are forwarded to Amazon CloudWatch Logs.
+
+## Log Group
+
+```text
 /opspulse/application
-Log Stream
+```
+
+## Log Stream
+
+```text
 opspulse-production
+```
 
-Centralised logging allows application activity to be investigated without relying solely on local EC2 log files.
+CloudWatch logs capture information including:
 
-CloudWatch captures information including:
+- FastAPI startup
+- Uvicorn startup
+- HTTP requests
+- Health checks
+- Readiness checks
+- API documentation requests
+- HTTP response status codes
 
-Application startup
-Uvicorn startup
-HTTP requests
-Health checks
-Readiness checks
-API documentation requests
-HTTP status responses
-Operations Dashboard
+Centralised logging allows application behaviour to be investigated without relying only on local EC2 logs.
 
-A dedicated Amazon CloudWatch dashboard provides visibility into the OpsPulse environment.
+---
 
-The dashboard allows infrastructure and application behaviour to be reviewed from a central location.
+# Monitoring
 
-Monitored information includes:
+## CloudWatch Dashboard
 
-EC2 CPU utilisation
-Network activity
-EC2 status information
-Application activity
-CloudWatch logs
-Alarm state
+A dedicated CloudWatch dashboard provides operational visibility into the environment.
 
-This provides an operational view of the service and underlying infrastructure.
+The dashboard includes information such as:
 
-Monitoring and Alerting
-High CPU Alarm
+- EC2 CPU utilisation
+- Network activity
+- Instance status
+- Application activity
+- Logs
+- Alarm state
 
-A CloudWatch alarm monitors the CPU utilisation of the EC2 instance.
+This provides a central operational view of the application and infrastructure.
 
-Alarm
+---
+
+## CPU Alarm
+
+A CloudWatch alarm monitors EC2 CPU utilisation.
+
+Alarm name:
+
+```text
 opspulse-high-cpu
-Configuration
-Setting	Value
-Metric	CPUUtilization
-Namespace	AWS/EC2
-Statistic	Average
-Threshold	Greater than 70%
-Period	300 seconds
-Evaluation periods	2
+```
 
-If CPU utilisation exceeds the configured threshold for the required evaluation periods, the alarm enters the:
+Configuration:
 
+| Setting | Value |
+|---|---|
+| Metric | CPUUtilization |
+| Namespace | AWS/EC2 |
+| Statistic | Average |
+| Threshold | Greater than 70% |
+| Period | 300 seconds |
+| Evaluation Periods | 2 |
+
+If CPU utilisation exceeds the configured threshold for the required evaluation periods, the alarm enters:
+
+```text
 ALARM
+```
 
-state.
+---
 
-Amazon SNS Alerting
+# SNS Alerting
 
-The CloudWatch CPU alarm is connected to an Amazon SNS topic:
+The CloudWatch alarm is connected to the SNS topic:
 
+```text
 opspulse-alerts
+```
 
-The notification workflow is:
+The alert path is:
 
-EC2
- │
- ▼
-CloudWatch Metric
- │
- ▼
+```text
+EC2 CPU Metric
+      │
+      ▼
+CloudWatch
+      │
+      ▼
 CloudWatch Alarm
- │
- ▼
+      │
+      ▼
 Amazon SNS
- │
- ▼
+      │
+      ▼
 Email Notification
+```
 
 When the alarm changes from:
 
+```text
 OK → ALARM
+```
 
-an email alert is generated.
+SNS sends an email notification.
 
 Recovery notifications are also configured for:
 
+```text
 ALARM → OK
+```
 
-This allows the operator to know both when an incident begins and when the monitored resource returns to normal operation.
+This means the operator receives notification both when an incident begins and when the monitored resource recovers.
 
-Alert Validation
+---
 
-The complete alerting workflow was tested end-to-end.
+# Alert Validation
 
-The CloudWatch alarm was manually moved into the ALARM state using the AWS CLI:
+The monitoring and notification workflow was tested end-to-end.
 
+The CloudWatch alarm was manually moved into the `ALARM` state using the AWS CLI:
+
+```bash
 aws cloudwatch set-alarm-state \
   --alarm-name opspulse-high-cpu \
   --state-value ALARM \
   --state-reason "Testing OpsPulse SNS email notification" \
   --region eu-west-2
+```
 
 The SNS email notification was successfully received.
 
-The alarm was subsequently returned to the OK state to validate recovery behaviour.
+The alarm was then returned to:
 
-This confirmed the complete operational path:
+```text
+OK
+```
 
+to validate recovery behaviour.
+
+This confirmed the alerting path:
+
+```text
 CloudWatch Metric
-        │
-        ▼
+       │
+       ▼
 CloudWatch Alarm
-        │
-        ▼
+       │
+       ▼
 Amazon SNS
-        │
-        ▼
+       │
+       ▼
 Email Notification
-Health Monitoring
+```
 
-OpsPulse provides application-level monitoring using health and readiness endpoints.
+---
 
-Local validation:
+# Observability Model
 
-curl http://localhost:8000/health
+OpsPulse demonstrates three core observability areas.
 
-Remote validation:
+## Logs
 
-curl http://<EC2-PUBLIC-IP>:8000/health
+```text
+FastAPI
+   │
+   ▼
+Docker
+   │
+   ▼
+CloudWatch Logs
+```
 
-Expected response:
+Logs help investigate application behaviour.
 
-{
-  "status": "healthy",
-  "environment": "production"
-}
+---
 
-Health endpoints make it possible to distinguish between:
+## Metrics
 
-A running EC2 instance
-A running Docker container
-A functioning application
+```text
+Amazon EC2
+     │
+     ▼
+CloudWatch Metrics
+```
 
-This is important because an infrastructure resource may be operational while the application itself is unavailable.
+Metrics provide infrastructure performance information.
 
-Incident Response
+---
+
+## Alerts
+
+```text
+CloudWatch Metric
+       │
+       ▼
+CloudWatch Alarm
+       │
+       ▼
+SNS
+       │
+       ▼
+Email
+```
+
+Alerts notify the operator when abnormal infrastructure conditions occur.
+
+---
+
+# Incident Response
 
 The project includes an incident-response runbook:
 
+```text
 docs/incident-runbook.md
+```
 
-The runbook provides a structured process for investigating OpsPulse service incidents.
+A typical incident workflow is:
 
-A typical investigation follows:
+```mermaid
+flowchart TD
 
-User reports service problem
-           │
-           ▼
-     Check /health
-           │
-           ▼
-   Check EC2 status
-           │
-           ▼
- Check Docker container
-           │
-           ▼
- Review CloudWatch logs
-           │
-           ▼
-Review CloudWatch metrics
-           │
-           ▼
- Check CloudWatch alarms
-           │
-           ▼
-Take corrective action
-           │
-           ▼
-Validate /health & /ready
-Troubleshooting Experience
+    ISSUE[Service Problem]
 
-The project involved resolving several realistic cloud and infrastructure issues.
+    ISSUE --> HEALTH[Check /health]
+    HEALTH --> EC2[Check EC2 Status]
+    EC2 --> DOCKER[Check Docker Container]
+    DOCKER --> LOGS[Review CloudWatch Logs]
+    LOGS --> METRICS[Review CloudWatch Metrics]
+    METRICS --> ALARMS[Review CloudWatch Alarms]
+    ALARMS --> ACTION[Take Corrective Action]
+    ACTION --> VERIFY[Validate /health and /ready]
+    VERIFY --> RECOVERED[Service Recovered]
+```
+
+This provides a structured troubleshooting and recovery process.
+
+---
+
+# Troubleshooting Experience
+
+The project involved resolving several realistic infrastructure and cloud issues.
 
 These included:
 
-SSH authentication and connectivity problems
-SSH private-key permissions
-Security-group configuration errors
-Incorrect source-IP configuration
-Docker port conflicts
-Container recreation
-IAM permission errors
-CloudWatch integration problems
-Terraform configuration changes
-Terraform-managed EC2 replacement
-Public IP changes following infrastructure replacement
-Application redeployment after EC2 replacement
-Git remote conflicts
-Terraform configuration validation
-SNS subscription validation
-CloudWatch alarm testing
+- SSH authentication problems
+- SSH key permissions
+- Security-group configuration errors
+- Incorrect public IP configuration
+- Docker port conflicts
+- Docker container recreation
+- IAM permission errors
+- CloudWatch integration problems
+- Terraform configuration changes
+- Terraform EC2 replacement
+- EC2 public IP changes
+- Application redeployment
+- Git remote conflicts
+- SNS subscription validation
+- CloudWatch alarm testing
 
-A major part of the project involved restoring the OpsPulse application after an EC2 instance was replaced.
+One of the most significant recovery scenarios occurred when Terraform replaced the EC2 instance.
 
-The replacement required:
+The application had to be restored by:
 
-Updating network access
-Connecting to the new instance
-Cloning the application repository
-Rebuilding the Docker image
-Starting the production container
-Reconnecting CloudWatch logging
-Testing /health
-Testing /ready
-Confirming CloudWatch logs
-Validating alarm notifications
+1. Updating network access
+2. Connecting to the replacement EC2 instance
+3. Cloning the application repository
+4. Rebuilding the Docker image
+5. Starting the production container
+6. Reconnecting CloudWatch logging
+7. Testing `/health`
+8. Testing `/ready`
+9. Confirming CloudWatch logs
+10. Revalidating monitoring and alerting
 
-This demonstrated recovery and troubleshooting skills in addition to initial deployment skills.
+This demonstrated both infrastructure deployment and operational recovery skills.
 
-Repository Structure
+---
+
+# Repository Structure
+
+```text
 opspulse-cloud-operations/
 │
 ├── app/
@@ -480,543 +786,235 @@ opspulse-cloud-operations/
 ├── requirements.txt
 ├── .gitignore
 └── README.md
-Git Workflow
+```
 
-Project changes are managed through Git and GitHub.
+---
 
-Typical workflow:
+# Operational Workflow
 
-git status
-git add .
-git commit -m "Describe change"
-git push origin main
+If OpsPulse becomes unavailable:
 
-Temporary Terraform backup files are excluded through .gitignore to prevent local working files from being committed to the repository.
+## 1. Test the Application
 
-Operational Scenario
-
-If OpsPulse becomes unavailable, the incident can be investigated systematically.
-
-1. Test the application
+```bash
 curl http://<EC2-PUBLIC-IP>:8000/health
-2. Confirm EC2 availability
+```
 
-Verify that the AWS EC2 instance is running and passing status checks.
+---
 
-3. Check the Docker container
+## 2. Check EC2
+
+Confirm the EC2 instance is running and passing status checks.
+
+---
+
+## 3. Check Docker
+
+```bash
 docker ps
-4. Review application logs
+```
 
-Inspect the CloudWatch log group:
+---
 
+## 4. Review Logs
+
+Inspect:
+
+```text
 /opspulse/application
-5. Review infrastructure metrics
+```
+
+in CloudWatch Logs.
+
+---
+
+## 5. Review Metrics
 
 Check:
 
-CPU utilisation
-Network activity
-Instance status
-6. Review alarms
+- CPU utilisation
+- Network activity
+- Instance status
 
-Confirm whether:
+---
 
+## 6. Review Alarm State
+
+Check:
+
+```text
 opspulse-high-cpu
+```
 
-has entered the ALARM state.
+---
 
-7. Perform recovery
+## 7. Take Corrective Action
 
 Restart or redeploy the Docker container if necessary.
 
-8. Validate recovery
+---
+
+## 8. Validate Recovery
 
 Confirm:
 
+```text
 /health
 /ready
+```
 
 return successful responses.
 
-Skills Demonstrated
+---
 
-OpsPulse demonstrates hands-on knowledge of:
+# Skills Demonstrated
 
-AWS
-Amazon EC2
-IAM
-Security Groups
-CloudWatch
-SNS
-AWS CLI
-Infrastructure
-Terraform
-Infrastructure as Code
-Infrastructure lifecycle management
-Cloud networking
-IAM permissions
-Containers
-Docker
-Docker images
-Container lifecycle management
-Docker logging
-Port mapping
-Monitoring
-CloudWatch Metrics
-CloudWatch Logs
-CloudWatch Alarms
-CloudWatch Dashboards
-SNS alerting
-Health checks
-Readiness checks
-Operations
-Incident investigation
-Troubleshooting
-Service recovery
-Log analysis
-Monitoring
-Alert validation
-Infrastructure recovery
-Development Workflow
-Git
-GitHub
-Version control
-Documentation
-Project Status
+## AWS
 
-OpsPulse is complete.
+- EC2
+- IAM
+- Security Groups
+- CloudWatch
+- SNS
+- AWS CLI
 
-Implemented and validated:
+## DevOps
 
-✅ FastAPI application
-✅ Production health endpoint
-✅ Readiness endpoint
-✅ Interactive API documentation
-✅ Docker containerisation
-✅ AWS EC2 hosting
-✅ Terraform Infrastructure as Code
-✅ Security-group configuration
-✅ Restricted SSH access
-✅ IAM role and instance profile
-✅ CloudWatch centralised logging
-✅ CloudWatch CPU monitoring
-✅ CloudWatch operations dashboard
-✅ High-CPU alarm
-✅ Amazon SNS topic
-✅ Email alarm notifications
-✅ Alarm-state validation
-✅ Recovery notifications
-✅ Incident-response runbook
-✅ Infrastructure recovery testing
-✅ GitHub version control
-✅ Project documentation
-Key Learning Outcomes
+- Docker
+- Terraform
+- Infrastructure as Code
+- Git
+- GitHub
 
-OpsPulse provided practical experience across the full lifecycle of a cloud-hosted application.
+## Monitoring
 
-The project demonstrated that cloud operations involves more than simply launching an EC2 instance.
+- CloudWatch Metrics
+- CloudWatch Logs
+- CloudWatch Dashboards
+- CloudWatch Alarms
+- SNS Alerting
+- Health Checks
+- Readiness Checks
 
-It required understanding how application, container, network, infrastructure, identity, monitoring, logging, and alerting components interact.
+## Operations
+
+- Incident investigation
+- Log analysis
+- Infrastructure troubleshooting
+- Service recovery
+- Alert validation
+- Infrastructure lifecycle management
+
+---
+
+# Project Status
+
+**OpsPulse is complete and operationally validated.**
+
+Implemented features:
+
+- ✅ FastAPI application
+- ✅ Health endpoint
+- ✅ Readiness endpoint
+- ✅ API documentation
+- ✅ Docker containerisation
+- ✅ AWS EC2 deployment
+- ✅ Terraform Infrastructure as Code
+- ✅ Security-group configuration
+- ✅ Restricted SSH access
+- ✅ IAM role and instance profile
+- ✅ CloudWatch centralised logging
+- ✅ CloudWatch CPU monitoring
+- ✅ CloudWatch dashboard
+- ✅ High-CPU alarm
+- ✅ Amazon SNS integration
+- ✅ Email alerts
+- ✅ Recovery notifications
+- ✅ Alert validation
+- ✅ Incident-response runbook
+- ✅ Infrastructure recovery testing
+- ✅ GitHub version control
+- ✅ Solution architecture documentation
+
+---
+
+# Learning Outcomes
+
+OpsPulse provided practical experience across the complete lifecycle of a cloud-hosted application.
 
 Key learning areas included:
 
-Designing repeatable cloud infrastructure
-Managing AWS resources through Terraform
-Running containerised workloads in production-style environments
-Applying IAM permissions
-Restricting infrastructure access
-Centralising application logs
-Monitoring infrastructure health
-Creating automated alerts
-Troubleshooting connectivity problems
-Recovering an application following infrastructure replacement
-Validating service recovery
-Maintaining infrastructure code through Git
-Project Summary
+- Deploying containerised workloads
+- Managing AWS infrastructure
+- Writing Terraform configuration
+- Managing infrastructure changes
+- Configuring IAM permissions
+- Securing network access
+- Centralising application logs
+- Monitoring EC2 metrics
+- Building CloudWatch dashboards
+- Creating automated alerts
+- Integrating SNS notifications
+- Troubleshooting infrastructure failures
+- Recovering applications after infrastructure changes
+- Validating application health
+- Managing projects through Git and GitHub
+
+The project demonstrates that operating a cloud application involves more than simply deploying infrastructure.
+
+It requires visibility, monitoring, alerting, troubleshooting, recovery, and operational documentation.
+
+---
+
+# Future Improvements
+
+Possible future enhancements include:
+
+- HTTPS
+- Custom domain
+- Application Load Balancer
+- Auto Scaling
+- CI/CD pipeline
+- ECS deployment
+- EKS deployment
+- Kubernetes
+- Additional CloudWatch alarms
+- Memory monitoring
+- Application latency monitoring
+- Automated deployment
+- Blue/green deployment
+- Enhanced observability
+
+These are optional future improvements rather than requirements for the current project.
+
+---
+
+# Project Summary
 
 OpsPulse demonstrates an end-to-end cloud operations environment using:
 
-FastAPI + Docker + AWS EC2 + Terraform + CloudWatch + SNS
+**FastAPI + Docker + AWS EC2 + Terraform + CloudWatch + SNS**
 
-The application is containerised and deployed on AWS EC2 using Terraform-managed infrastructure.
+Terraform manages the AWS infrastructure.
 
-CloudWatch provides centralised logs, metrics, dashboards, and infrastructure monitoring.
+Docker runs the FastAPI application on EC2.
 
-A high-CPU CloudWatch alarm is connected to Amazon SNS to provide automated email notification when infrastructure enters an alarm state.
+CloudWatch provides centralised logs, infrastructure metrics, dashboards, and alarms.
 
-Health and readiness endpoints provide application-level visibility, while an incident-response runbook provides a structured troubleshooting process.
+Amazon SNS provides automated email notifications when monitored infrastructure enters an alarm state.
 
-The alerting workflow has been validated end-to-end.
+Health and readiness endpoints provide application-level visibility.
 
-Author
+An incident-response runbook provides a structured troubleshooting and recovery process.
 
-Amos Agboola
+The monitoring and alerting workflow has been successfully tested end-to-end.
+
+---
+
+# Author
+
+**Amos Agboola**
 
 Cloud / DevOps Portfolio Project
 
-OpsPulse was built as a practical demonstration of cloud infrastructure deployment, monitoring, alerting, automation, troubleshooting, and operational support using AWS and modern DevOps tooling.
-
-
-### Final GitHub step
-
-Replace your existing `README.md` with this version, save it, and run:
-
-```bash
-cd ~/Downloads/opspulse-portfolio
-
-git add README.md
-
-git commit -m "Finalize OpsPulse project documentation"
-
-git push origin main
-
-After that, I would mark OpsPulse as completed rather than continuing to add random features. It now tells a coherent story from infrastructure provisioning through monitoring and incident recovery, which is more valuable for your portfolio than endlessly expanding one project.
-
-Add solution architecture design 
-
-Yes — add a dedicated Solution Architecture Design section to the README. For GitHub, I recommend using a Mermaid diagram because it renders directly inside the README and looks much more professional than plain ASCII.
-
-Place this section after Overview and before Technology Stack:
-
-# Solution Architecture Design
-
-OpsPulse follows a simple production-style AWS architecture focused on deployment, observability, monitoring, alerting, and operational support.
-
-```mermaid
-flowchart TD
-
-    DEV[Developer / GitHub Repository]
-
-    DEV --> TF[Terraform Infrastructure as Code]
-
-    TF --> AWS[AWS Cloud Environment]
-
-    AWS --> SG[Security Group]
-    AWS --> IAM[IAM Role & Instance Profile]
-    AWS --> EC2[Amazon EC2 Instance]
-    AWS --> CW[Amazon CloudWatch]
-    AWS --> SNS[Amazon SNS]
-
-    SG --> EC2
-    IAM --> EC2
-
-    EC2 --> DOCKER[Docker Engine]
-    DOCKER --> API[OpsPulse FastAPI Application]
-
-    API --> HEALTH[/health Endpoint]
-    API --> READY[/ready Endpoint]
-    API --> DOCS[/docs Endpoint]
-
-    DOCKER --> LOGS[Application Logs]
-
-    LOGS --> CWLOGS[CloudWatch Logs]
-    EC2 --> METRICS[EC2 Metrics]
-
-    METRICS --> CW
-    CWLOGS --> CW
-
-    CW --> DASH[CloudWatch Dashboard]
-    CW --> ALARM[opspulse-high-cpu Alarm]
-
-    ALARM --> SNS
-    SNS --> EMAIL[Email Notification]
-
-    EMAIL --> OPS[Cloud / Operations Engineer]
-
-    OPS --> INVESTIGATE[Investigate Incident]
-    INVESTIGATE --> HEALTH
-    INVESTIGATE --> CWLOGS
-    INVESTIGATE --> DASH
-Architecture Components
-GitHub
-
-GitHub acts as the central source-control repository for:
-
-FastAPI application code
-Docker configuration
-Terraform infrastructure code
-Incident-response documentation
-Project documentation
-
-All project changes are tracked through Git.
-
-Terraform
-
-Terraform provides the Infrastructure as Code layer.
-
-Terraform is responsible for provisioning and managing AWS resources including:
-
-EC2 instance
-Security group
-IAM role
-IAM instance profile
-CloudWatch log group
-CloudWatch alarm
-CloudWatch dashboard
-SNS topic
-SNS subscription
-
-This allows the environment to be recreated consistently and infrastructure changes to be reviewed before deployment.
-
-Amazon EC2
-
-Amazon EC2 provides the compute layer for OpsPulse.
-
-The EC2 instance hosts:
-
-Amazon Linux
-      │
-      ▼
-Docker Engine
-      │
-      ▼
-OpsPulse Container
-      │
-      ▼
-FastAPI Application
-
-The application listens on:
-
-TCP Port 8000
-Docker
-
-Docker packages the FastAPI application and its dependencies into a portable container.
-
-The container provides:
-
-Consistent application runtime
-Dependency isolation
-Simplified deployment
-Automatic restart capability
-CloudWatch log forwarding
-FastAPI Application
-
-The application exposes operational endpoints including:
-
-/
-
-Main application endpoint.
-
-/health
-
-Confirms that the application is running.
-
-/ready
-
-Confirms that the application is ready to process requests.
-
-/docs
-
-Provides Swagger/OpenAPI documentation.
-
-Security Group
-
-The AWS security group provides the network-security layer.
-
-It controls access to the EC2 instance.
-
-SSH access is restricted to an authorised IP address, while the application is made available through its configured application port.
-
-This follows the principle of reducing unnecessary infrastructure exposure.
-
-IAM
-
-The EC2 instance uses an IAM role and instance profile to access AWS services.
-
-This avoids storing permanent AWS credentials directly on the server.
-
-IAM permissions allow the instance to interact with services required by OpsPulse, including CloudWatch.
-
-Amazon CloudWatch Logs
-
-Docker application logs are forwarded to:
-
-/opspulse/application
-
-using the log stream:
-
-opspulse-production
-
-This provides centralised log storage and allows incidents to be investigated without depending exclusively on local EC2 logs.
-
-CloudWatch Metrics
-
-Amazon CloudWatch collects infrastructure metrics from the EC2 instance.
-
-One of the primary monitored metrics is:
-
-CPUUtilization
-
-This provides visibility into server resource usage.
-
-CloudWatch Alarm
-
-The monitoring architecture includes:
-
-opspulse-high-cpu
-
-The alarm monitors EC2 CPU utilisation.
-
-Current configuration:
-
-Metric: CPUUtilization
-
-Statistic: Average
-
-Threshold: > 70%
-
-Period: 300 seconds
-
-Evaluation periods: 2
-
-When the threshold conditions are met, the alarm moves from:
-
-OK → ALARM
-Amazon SNS
-
-The CloudWatch alarm publishes notifications to the SNS topic:
-
-opspulse-alerts
-
-SNS then delivers the alert through email.
-
-The alerting architecture is:
-
-EC2 CPU Utilisation
-        │
-        ▼
-CloudWatch Metric
-        │
-        ▼
-CloudWatch Alarm
-        │
-        ▼
-Amazon SNS
-        │
-        ▼
-Email Alert
-        │
-        ▼
-Operations Engineer
-
-Recovery notifications are also configured.
-
-When infrastructure returns to its normal state:
-
-ALARM → OK
-
-SNS can send a recovery notification.
-
-Observability Architecture
-
-OpsPulse combines three important areas of observability:
-
-Logs
-FastAPI
-   │
-   ▼
-Docker
-   │
-   ▼
-CloudWatch Logs
-
-Used for investigating application behaviour and requests.
-
-Metrics
-EC2
- │
- ▼
-CloudWatch Metrics
-
-Used to monitor infrastructure performance.
-
-Alerts
-CloudWatch Metric
-       │
-       ▼
-CloudWatch Alarm
-       │
-       ▼
-SNS
-       │
-       ▼
-Email
-
-Used to notify operators when abnormal conditions occur.
-
-Together, these provide visibility into both application and infrastructure health.
-
-Incident Detection and Recovery Flow
-
-This architecture demonstrates both proactive monitoring and structured incident response.
-
-Architecture Principles
-
-The OpsPulse design demonstrates several cloud and DevOps principles:
-
-Infrastructure as Code
-Containerisation
-Least-privilege access
-Centralised logging
-Infrastructure monitoring
-Automated alerting
-Application health checks
-Operational visibility
-Incident response
-Service recovery
-Version-controlled infrastructure
-Repeatable deployment
-Architecture Summary
-
-The complete OpsPulse architecture can be summarised as:
-
-GitHub
-   │
-   ▼
-Terraform
-   │
-   ▼
-AWS
-   │
-   ├──────── Security Group
-   │
-   ├──────── IAM
-   │
-   └──────── EC2
-               │
-               ▼
-             Docker
-               │
-               ▼
-            FastAPI
-          ┌────┼─────┐
-          │    │     │
-          ▼    ▼     ▼
-      /health /ready /docs
-               │
-               ▼
-        CloudWatch Logs
-               │
-               ▼
-          CloudWatch
-          ┌────┴─────┐
-          │          │
-          ▼          ▼
-      Dashboard     Alarm
-                      │
-                      ▼
-                     SNS
-                      │
-                      ▼
-                    Email
-                      │
-                      ▼
-              Operations Engineer
-
-This is the version I would use in the finished README because it makes the project look like a **designed cloud solution**, rather than just a collection of AWS services.
-
-For an interview, the simplest way to explain this architecture is:
-
-> “OpsPulse is built around an EC2-hosted Docker application. Terraform provisions the infrastructure, IAM controls AWS permissions, security groups control network access, CloudWatch collects logs and metrics, and a CloudWatch alarm sends events through SNS to email. Health and readiness endpoints provide application-level monitoring, while the CloudWatch dashboard provides infrastructure visibility.”
-
-That architecture explanation alone gives you a strong answer if an interviewer says, **“Walk me through your solution architecture.”**
+OpsPulse was built as a practical demonstration of cloud infrastructure deployment, Infrastructure as Code, containerisation, monitoring, alerting, troubleshooting, and operational recovery using AWS and modern DevOps tools.
