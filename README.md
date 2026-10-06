@@ -65,8 +65,6 @@ OpsPulse demonstrates practical skills relevant to roles such as:
 ---
 
 # Solution Architecture
-
-```mermaid
 flowchart TD
 
     DEV[Developer / GitHub Repository]
