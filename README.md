@@ -18,7 +18,7 @@ The project combines **FastAPI, Docker, AWS EC2, Terraform, IAM, Amazon CloudWat
 - [Core Features](#core-features)
 - [Technology Stack](#technology-stack)
 - [Application Endpoints](#application-endpoints)
-- [Containerisation](#containerisation)
+
 - [AWS Infrastructure](#aws-infrastructure)
 - [Infrastructure as Code](#infrastructure-as-code)
 - [Security](#security)
